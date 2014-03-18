@@ -1,0 +1,63 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'application'
+
+mainClassName = "net.tajzich.osxbundler.example.Main"
+
+sourceCompatibility = 1.5
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    //Added couple of dependencies just to show that it is bundled correctly
+    compile 'log4j:log4j:1.2.17'
+    compile 'org.springframework:spring-core:4.0.2.RELEASE'
+
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+jar {
+    manifest {
+        attributes('Main-Class': "net.tajzich.osxbundler.example.Main")
+    }
+}
+
+task copyToLib(type: Copy, dependsOn: 'jar') {
+    into "$buildDir/output/lib"
+    from configurations.runtime
+}
+
+task macLauncher(dependsOn: 'copyToLib') << {
+
+    ant.taskdef(name: 'bundleapp', classname: "com.oracle.appbundler.AppBundlerTask") {
+        classpath {
+            fileset(dir: 'lib', includes: '*.jar')
+        }
+    }
+
+    ant.bundleapp(outputdirectory: 'dist',
+            name: 'osxbundler',
+            displayname: "OSX Bundler Example",
+            identifier: "net.tajzich.osxbundler.example",
+            mainclassname: "net.tajzich.osxbundler.example.Main",
+    ) {
+
+        librarypath(dir: "$buildDir/output/lib")
+        classpath(dir: "${buildDir}/libs")
+
+        //Will print:
+        //System arg: first
+        //System arg: second
+        argument(value: "first")
+        argument(value: "second")
+
+        //To add JVM options use:
+        //option(value: "an option")
+    }
+}
+
+defaultTasks 'macLauncher'
